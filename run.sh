@@ -43,7 +43,7 @@ function gitbare() {
         cd ${GIT_BARE}
         git fetch
     else
-        git clone --bare --depth=1 -b ${REV} git@github.com:JetBrains/kotlin.git ${GIT_BARE}
+        git clone --bare --depth=1 -b ${REV} https://github.com/JetBrains/kotlin.git ${GIT_BARE}
     fi
 }
 
