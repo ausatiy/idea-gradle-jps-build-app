@@ -39,7 +39,7 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
 
     override fun getUsageMessage(): String = "Usage: idea $cmd <path-to-gradle-project> <path-to-jdk>"
 
-    override fun processCommand(args: Array<out String>?, currentDirectory: String?) {
+    override fun processCommand(args: Array<String>, currentDirectory: String?) {
         println("Initializing")
 
         System.setProperty("idea.skip.indices.initialization", "true")
@@ -145,7 +145,7 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         project!!.save()
         ProjectManagerEx.getInstanceEx().openProject(project!!)
         FileDocumentManager.getInstance().saveAllDocuments()
-        ApplicationManager.getApplication().saveSettings(true)
+        ApplicationManager.getApplication().saveSettings()
         ApplicationManager.getApplication().saveAll()
 
         println("Done. Shooting down.")
