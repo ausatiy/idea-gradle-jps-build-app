@@ -22,7 +22,7 @@ JPS_STANDALONE="${DIR}/utils/jps-standalone"
 DIST_COMPARE_BIN="${DIR}/utils/dist-compare/bin/dist-compare"
 
 GRADLE_CACHE="${HOME}/.gradle/caches/modules-2/files-2.1"
-IDEA="${GRADLE_CACHE}/com.jetbrains.intellij.idea/ideaIC/2018.3/70e72bdc97f330ebe4f06ad307d8928ea903cf87/ideaIC-2018.3"
+IDEA="${GRADLE_CACHE}/com.jetbrains.intellij.idea/ideaIC/2019.1/b0bd766fbab61007aefe7922895a1726afe11b14/ideaIC-2019.1"
 
 mkdir -p "$SANDBOX"
 GIT_BARE="${SANDBOX}/gitbare"
@@ -131,14 +131,6 @@ function jpsBuild() {
 echo "Updating shared git bare clone ${GIT_BARE}..."
 gitbare
 
-################ Gradle
-
-echo "Updating ${GRADLE_PROJECT}..."
-checkout ${GRADLE_PROJECT}
-#echo "jpsBuild=true" >> gradle.properties
-cd ${GRADLE_PROJECT}
-./gradlew clean  dist ideaPlugin --parallel
-
 ################ JPS
 
 echo "Updating ${JPS_PROJECT}..."
@@ -147,6 +139,14 @@ echo "jpsBuild=true" >> ${JPS_PROJECT}/gradle.properties
 
 jpsImportIdeaProject
 jpsBuild
+
+################ Gradle
+
+echo "Updating ${GRADLE_PROJECT}..."
+checkout ${GRADLE_PROJECT}
+#echo "jpsBuild=true" >> gradle.properties
+cd ${GRADLE_PROJECT}
+./gradlew clean  dist ideaPlugin --parallel
 
 ################ Compare
 
