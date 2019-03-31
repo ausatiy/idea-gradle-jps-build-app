@@ -39,12 +39,14 @@ DEBUG=false
 #####################
 
 function gitbare() {
+    echo "##teamcity[blockOpened name='git-clone-${GIT_BARE}' description='Git clone ${GIT_BARE}']"
     if [[ -d "${GIT_BARE}" ]]; then
         cd ${GIT_BARE}
         git fetch
     else
         git clone --bare --depth=1 -b ${REV} https://github.com/JetBrains/kotlin.git ${GIT_BARE}
     fi
+    echo "##teamcity[blockClosed name='git-clone-${GIT_BARE}']"
 }
 
 function checkout() {
@@ -59,6 +61,8 @@ function checkout() {
 }
 
 function jpsImportIdeaProject() {
+    echo "##teamcity[blockOpened name='import-jps-project' description='Import jps project']"
+
     IDEA_LIB="${IDEA}/lib"
     IDEA_CP="${JDK}/lib/tools.jar"
     for jar in log4j.jar jdom.jar trove4j.jar openapi.jar util.jar extensions.jar bootstrap.jar idea_rt.jar idea.jar
@@ -87,9 +91,13 @@ function jpsImportIdeaProject() {
     ARGS+=("${JDK}")
 
     ${JAVA} ${ARGS[@]}
+
+    echo "##teamcity[blockClosed name='import-jps-project']"
 }
 
 function jpsBuild() {
+    echo "##teamcity[blockOpened name='jps-build' description='Run jps build']"
+
     IDEA_PLUGINS="${IDEA}/plugins"
     IDEA_LIB="${IDEA}/lib"
 
@@ -126,6 +134,8 @@ function jpsBuild() {
 
     # -i
     # --modules "idea_main,idea_test"
+
+    echo "##teamcity[blockClosed name='jps-build']"
 }
 
 echo "Updating shared git bare clone ${GIT_BARE}..."
@@ -142,14 +152,18 @@ jpsBuild
 
 ################ Gradle
 
+echo "##teamcity[blockOpened name='gradle-build' description='Running gradle build']"
 echo "Updating ${GRADLE_PROJECT}..."
 checkout ${GRADLE_PROJECT}
 #echo "jpsBuild=true" >> gradle.properties
 cd ${GRADLE_PROJECT}
 ./gradlew clean  dist ideaPlugin --parallel
+echo "##teamcity[blockClosed name='gradle-build']"
 
 ################ Compare
 
+echo "##teamcity[blockOpened name='compare-distributions' description='Compare distributions']"
 rm -rf ${REPORT_DIR}
 mkdir -p ${REPORT_DIR}/diff
 ${DIST_COMPARE_BIN} ${GRADLE_PROJECT}/dist ${JPS_PROJECT}/dist ${REPORT_DIR}
+echo "##teamcity[blockClosed name='compare-distributions']"

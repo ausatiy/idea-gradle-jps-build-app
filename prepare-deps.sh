@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+echo "##teamcity[blockOpened name='prepare-deps' description='Prepare jps build utilities']"
 set -x
 set -e
 
@@ -22,3 +22,5 @@ curl -# -L "https://www.jetbrains.com/intellij-repository/releases/com/jetbrains
      -o "jps-standalone.zip"
 rm -rf jps-standalone
 unzip -qo jps-standalone.zip -d jps-standalone
+
+echo "##teamcity[blockClosed name='prepare-deps']"
