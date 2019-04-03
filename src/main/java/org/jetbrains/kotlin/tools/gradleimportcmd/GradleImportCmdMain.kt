@@ -46,10 +46,14 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
 
         val application = ApplicationManagerEx.getApplicationEx()
 
+        println("Get application")
+
         try {
             application.runReadAction {
+                println("Entered readAction")
                 try {
                     application.isSaveAllowed = true
+                    println("Save allowed")
                     run()
                 } catch (e: Exception) {
                     LOG.error(e)
@@ -58,6 +62,7 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         } catch (t: Throwable) {
             t.printStackTrace()
         } finally {
+            println("Exit application")
             application.exit(true, true)
         }
     }
@@ -81,6 +86,7 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
     var project: Project? = null
 
     private fun run() {
+        println("__1")
         projectPath = projectPath.replace(File.separatorChar, '/')
         val vfsProject = LocalFileSystem.getInstance().findFileByPath(projectPath)
         if (vfsProject == null) {
@@ -88,13 +94,19 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
             printHelp()
         }
 
+        println("__2")
+
         project = ProjectUtil.openProject(projectPath, null, false)
+
+        println("__3 $project")
 
         if (project == null) {
             logError("Unable to open project")
             gracefulExit()
             return
         }
+
+        println("__4")
 
         println("Project loaded, refreshing from Gradle...")
 

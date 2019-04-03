@@ -61,6 +61,7 @@ function checkout() {
 }
 
 function jpsImportIdeaProject() {
+    pushd ${SANDBOX}/jps
     echo "##teamcity[blockOpened name='import-jps-project' description='Import jps project']"
 
     IDEA_LIB="${IDEA}/lib"
@@ -93,9 +94,11 @@ function jpsImportIdeaProject() {
     ${JAVA} ${ARGS[@]}
 
     echo "##teamcity[blockClosed name='import-jps-project']"
+    popd
 }
 
 function jpsBuild() {
+    pushd ${SANDBOX}/jps
     echo "##teamcity[blockOpened name='jps-build' description='Run jps build']"
 
     IDEA_PLUGINS="${IDEA}/plugins"
@@ -136,6 +139,7 @@ function jpsBuild() {
     # --modules "idea_main,idea_test"
 
     echo "##teamcity[blockClosed name='jps-build']"
+    popd
 }
 
 echo "Updating shared git bare clone ${GIT_BARE}..."
