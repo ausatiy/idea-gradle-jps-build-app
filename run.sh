@@ -4,7 +4,6 @@ set -x
 set -e
 
 REV="master" # note: changing this requires bare clone config update
-SANDBOX="${HOME}/tasks/kwjps/sandbox"
 
 ###################
 
@@ -12,6 +11,7 @@ JDK="$JDK_18"
 
 # this script home dir
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+SANDBOX="${DIR}/tasks/kwjps/sandbox"
 
 if [[ ! -d "${DIR}/utils" ]]; then
     ${DIR}/prepare-deps.sh
