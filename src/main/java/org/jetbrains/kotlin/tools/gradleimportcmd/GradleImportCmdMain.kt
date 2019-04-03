@@ -5,6 +5,9 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ApplicationStarterBase
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.application.ex.ApplicationManagerEx
+import com.intellij.openapi.compiler.CompileContext
+import com.intellij.openapi.compiler.CompileStatusNotification
+import com.intellij.openapi.compiler.CompilerManager
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.externalSystem.model.DataNode
@@ -29,6 +32,8 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
 import org.jetbrains.plugins.gradle.util.GradleConstants
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
 
 const val cmd = "importAndSave"
 
@@ -86,7 +91,7 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
     var project: Project? = null
 
     private fun run() {
-        println("__1")
+        println("Opening project...")
         projectPath = projectPath.replace(File.separatorChar, '/')
         val vfsProject = LocalFileSystem.getInstance().findFileByPath(projectPath)
         if (vfsProject == null) {
@@ -94,19 +99,13 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
             printHelp()
         }
 
-        println("__2")
-
         project = ProjectUtil.openProject(projectPath, null, false)
-
-        println("__3 $project")
 
         if (project == null) {
             logError("Unable to open project")
             gracefulExit()
             return
         }
-
-        println("__4")
 
         println("Project loaded, refreshing from Gradle...")
 
@@ -160,7 +159,18 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         ApplicationManager.getApplication().saveSettings()
         ApplicationManager.getApplication().saveAll()
 
-        println("Done. Shooting down.")
+        println("Done.")
+
+        val finishedLautch = CountDownLatch(1)
+        println("Compiling project")
+        val callback = CompileStatusNotification { aborted, errors, warnings, compileContext -> run {
+                println("Compilation done. Aborted=$aborted, Errors=$errors, Warnings=$warnings, CompileContext=$compileContext ")
+                finishedLautch.countDown()
+            }
+        }
+        CompilerManager.getInstance(project).make(callback)
+        finishedLautch.await()
+        println("Compile done. Exiting...")
     }
 
     lateinit var mySdk: Sdk
