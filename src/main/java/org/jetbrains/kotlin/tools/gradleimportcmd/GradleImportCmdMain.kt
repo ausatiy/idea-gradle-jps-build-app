@@ -29,6 +29,7 @@ import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.projectRoots.impl.JavaAwareProjectJdkTableImpl
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.LocalFileSystem
+import org.jetbrains.plugins.gradle.settings.DefaultGradleProjectSettings
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
 import org.jetbrains.plugins.gradle.util.GradleConstants
 import java.io.File
@@ -88,8 +89,6 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         }
     }
 
-    var project: Project? = null
-
     private fun run() {
         println("Opening project...")
         projectPath = projectPath.replace(File.separatorChar, '/')
@@ -99,11 +98,11 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
             printHelp()
         }
 
-        project = ProjectUtil.openProject(projectPath, null, false)
+        val project = ProjectUtil.openProject(projectPath, null, false)
 
         if (project == null) {
             logError("Unable to open project")
-            gracefulExit()
+            gracefulExit(project)
             return
         }
 
@@ -113,28 +112,28 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         WriteAction.runAndWait<RuntimeException> {
             mySdk = (table.defaultSdkType as JavaSdk).createJdk("1.8", jdkPath)
             ProjectJdkTable.getInstance().addJdk(mySdk)
-            ProjectRootManager.getInstance(project!!).projectSdk = mySdk
+            ProjectRootManager.getInstance(project).projectSdk = mySdk
         }
 
         val projectSettings = GradleProjectSettings()
         projectSettings.externalProjectPath = projectPath
         projectSettings.withQualifiedModuleNames()
 
-        val systemSettings = ExternalSystemApiUtil.getSettings(project!!, GradleConstants.SYSTEM_ID)
+        val systemSettings = ExternalSystemApiUtil.getSettings(project, GradleConstants.SYSTEM_ID)
         systemSettings.linkProject(projectSettings)
 
         refreshProject(
-                project!!,
+                project,
                 GradleConstants.SYSTEM_ID,
                 projectPath,
                 object : ExternalProjectRefreshCallback {
                     override fun onSuccess(externalProject: DataNode<ProjectData>?) {
                         if (externalProject != null) {
                             ServiceManager.getService(ProjectDataManager::class.java)
-                                    .importData(externalProject, project!!, true)
+                                    .importData(externalProject, project, true)
                         } else {
                             println("Cannot get external project. See IDEA logs")
-                            gracefulExit()
+                            gracefulExit(project)
                         }
                     }
                 },
@@ -145,7 +144,7 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
 
         println("Unloading buildSrc modules...")
 
-        val moduleManager = ModuleManager.getInstance(project!!)
+        val moduleManager = ModuleManager.getInstance(project)
         val buildSrcModuleNames = moduleManager.sortedModules
                 .filter { it.name.contains("buildSrc") }
                 .map { it.name }
@@ -153,13 +152,16 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
 
         println("Saving...")
 
-        project!!.save()
-        ProjectManagerEx.getInstanceEx().openProject(project!!)
+        project.save()
+        ProjectManagerEx.getInstanceEx().openProject(project)
         FileDocumentManager.getInstance().saveAllDocuments()
         ApplicationManager.getApplication().saveSettings()
         ApplicationManager.getApplication().saveAll()
 
         println("Done.")
+        println("Setting delegation mode")
+        DefaultGradleProjectSettings.getInstance(project).isDelegatedBuild = false
+        println("Delegation setting delegation done")
 
         val finishedLautch = CountDownLatch(1)
         println("Compiling project")
@@ -175,15 +177,10 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
 
     lateinit var mySdk: Sdk
 
-    private fun closeProject() {
+    private fun gracefulExit(project: Project?) {
         if (project?.isDisposed == false) {
-            ProjectUtil.closeAndDispose(project!!)
-            project = null
+            ProjectUtil.closeAndDispose(project)
         }
-    }
-
-    private fun gracefulExit() {
-        closeProject()
         throw RuntimeException("Failed to proceed")
     }
 
