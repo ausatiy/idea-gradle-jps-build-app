@@ -1,23 +1,22 @@
 package org.jetbrains.kotlin.tools.gradleimportcmd
 
+import com.intellij.compiler.impl.CompileDriver2
+import com.intellij.compiler.impl.ProjectCompileScope
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ApplicationStarterBase
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.application.ex.ApplicationManagerEx
-import com.intellij.openapi.compiler.CompileContext
 import com.intellij.openapi.compiler.CompileStatusNotification
-import com.intellij.openapi.compiler.CompilerManager
+import com.intellij.openapi.compiler.CompilerMessageCategory
 import com.intellij.openapi.components.ServiceManager
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.externalSystem.model.DataNode
 import com.intellij.openapi.externalSystem.model.project.ProjectData
 import com.intellij.openapi.externalSystem.service.execution.ProgressExecutionMode
 import com.intellij.openapi.externalSystem.service.project.ExternalProjectRefreshCallback
 import com.intellij.openapi.externalSystem.service.project.ProjectDataManager
+import com.intellij.openapi.externalSystem.settings.ExternalProjectSettings
 import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
-import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil.toCanonicalPath
-import com.intellij.openapi.externalSystem.util.ExternalSystemUtil
 import com.intellij.openapi.externalSystem.util.ExternalSystemUtil.refreshProject
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.ModuleManager
@@ -28,19 +27,21 @@ import com.intellij.openapi.projectRoots.ProjectJdkTable
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.projectRoots.impl.JavaAwareProjectJdkTableImpl
 import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.roots.ui.configuration.ProjectStructureConfigurable
+import com.intellij.openapi.roots.ui.configuration.projectRoot.ProjectSdksModel
+import com.intellij.openapi.util.Computable
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.util.ThreeState
+import com.intellij.util.containers.stream
 import org.jetbrains.plugins.gradle.settings.DefaultGradleProjectSettings
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
 import org.jetbrains.plugins.gradle.util.GradleConstants
 import java.io.File
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicBoolean
 
 const val cmd = "importAndSave"
 
 class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
-    private val LOG = Logger.getInstance("#org.jetbrains.kotlin.tools.gradleimportcmd.GradleImportCmdMain")
-
     override fun isHeadless(): Boolean = true
 
     override fun getUsageMessage(): String = "Usage: idea $cmd <path-to-gradle-project> <path-to-jdk>"
@@ -55,16 +56,52 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         println("Get application")
 
         try {
-            application.runReadAction {
-                println("Entered readAction")
-                try {
+            val project = application.runReadAction(Computable<Project?> {
+                return@Computable try {
+                    println("Entered readAction")
                     application.isSaveAllowed = true
                     println("Save allowed")
-                    run()
+                    importProject()
                 } catch (e: Exception) {
-                    LOG.error(e)
+                    e.printStackTrace()
+                    null
                 }
+            })
+
+            println("Project = $project")
+            val finishedLautch = CountDownLatch(1)
+            if (project == null) {
+                println("Project is null")
+                System.exit(1)
+            } else {
+                println("Compiling project")
+                val callback = CompileStatusNotification { aborted, errors, warnings, compileContext ->
+                    run {
+                        println("--------------------------------")
+                        println("Compilation done. Aborted=$aborted, Errors=$errors, Warnings=$warnings, CompileContext=$compileContext ")
+                        CompilerMessageCategory.values().forEach { category ->
+                            compileContext.getMessages(category).forEach {
+                                try {
+                                    println("$category - ${it.virtualFile?.canonicalPath ?: "-"}: ${it.message}")
+                                } catch (e: Throwable) {
+                                    e.printStackTrace()
+                                }
+
+                            }
+                        }
+                        println("--------------------------------")
+                        finishedLautch.countDown()
+                    }
+                }
+
+                //CompileDriver2(project).make(ProjectCompileScope(project), true, callback)
+                CompileDriver2(project).rebuild(callback)
+                        //.make(ProjectCompileScope(project), true, callback)
+                finishedLautch.await()
+                println("Compile done. Exiting...")
             }
+
+
         } catch (t: Throwable) {
             t.printStackTrace()
         } finally {
@@ -89,7 +126,8 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         }
     }
 
-    private fun run() {
+    private fun importProject(): Project? {
+
         println("Opening project...")
         projectPath = projectPath.replace(File.separatorChar, '/')
         val vfsProject = LocalFileSystem.getInstance().findFileByPath(projectPath)
@@ -103,23 +141,36 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         if (project == null) {
             logError("Unable to open project")
             gracefulExit(project)
-            return
+            return null
         }
+
+        DefaultGradleProjectSettings.getInstance(project).isDelegatedBuild = false
 
         println("Project loaded, refreshing from Gradle...")
 
         val table = JavaAwareProjectJdkTableImpl.getInstanceEx()
         WriteAction.runAndWait<RuntimeException> {
+
+            //JavaSdk("123").createJdk("name", jdkPath)
             mySdk = (table.defaultSdkType as JavaSdk).createJdk("1.8", jdkPath)
             ProjectJdkTable.getInstance().addJdk(mySdk)
             ProjectRootManager.getInstance(project).projectSdk = mySdk
+
+            //public void addSdk(@NotNull SdkType type, @NotNull String home, @Nullable Consumer<Sdk> callback) {
+            //ProjectStructureConfigurable.getInstance(project).projectJdksModel.addSdk(mySdk.sdkType, jdkPath, null)
+
         }
 
         val projectSettings = GradleProjectSettings()
         projectSettings.externalProjectPath = projectPath
+        projectSettings.delegatedBuild = ThreeState.NO
+        projectSettings.storeProjectFilesExternally = ThreeState.NO
         projectSettings.withQualifiedModuleNames()
 
         val systemSettings = ExternalSystemApiUtil.getSettings(project, GradleConstants.SYSTEM_ID)
+        val linkedSettings: Collection<out ExternalProjectSettings> = systemSettings.getLinkedProjectsSettings() as Collection<ExternalProjectSettings>
+        linkedSettings.filter { it is GradleProjectSettings }.forEach { systemSettings.unlinkExternalProject(it.externalProjectPath) }
+
         systemSettings.linkProject(projectSettings)
 
         refreshProject(
@@ -150,6 +201,10 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
                 .map { it.name }
         moduleManager.setUnloadedModules(buildSrcModuleNames)
 
+//        println("Setting delegation mode")
+//        DefaultGradleProjectSettings.getInstance(project).isDelegatedBuild = false
+//        println("Delegation setting delegation done")
+
         println("Saving...")
 
         project.save()
@@ -159,20 +214,8 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         ApplicationManager.getApplication().saveAll()
 
         println("Done.")
-        println("Setting delegation mode")
-        DefaultGradleProjectSettings.getInstance(project).isDelegatedBuild = false
-        println("Delegation setting delegation done")
 
-        val finishedLautch = CountDownLatch(1)
-        println("Compiling project")
-        val callback = CompileStatusNotification { aborted, errors, warnings, compileContext -> run {
-                println("Compilation done. Aborted=$aborted, Errors=$errors, Warnings=$warnings, CompileContext=$compileContext ")
-                finishedLautch.countDown()
-            }
-        }
-        CompilerManager.getInstance(project).make(callback)
-        finishedLautch.await()
-        println("Compile done. Exiting...")
+        return project
     }
 
     lateinit var mySdk: Sdk
