@@ -31,6 +31,13 @@ intellij {
     sandboxDirectory = "$project.rootDir/local"
 }
 
+tasks.getByName('runIde') {
+    systemProperties = ['java.awt.headless': 'true']
+    args = ['importAndSave', 'C:/tasks/validateClasspath/tmp_jps_compilation_validation/kotlin', 'C:/JDK/jdk_1.8']
+
+}
+
+
 group 'org.jetbrains'
 version '0.1' // Plugin version
 
