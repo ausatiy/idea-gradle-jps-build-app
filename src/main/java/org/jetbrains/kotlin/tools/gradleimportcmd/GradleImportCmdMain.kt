@@ -103,7 +103,7 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
                     }
                 }
 
-                if (System.getProperty("build_mode_use_make") == "true") {
+                if (System.getenv("build_mode_use_make") == "true") {
                     CompileDriver2(project).make(ProjectCompileScope(project), true, callback)
                 } else {
                     val compileContext = CompileDriver2(project).rebuild(callback)
