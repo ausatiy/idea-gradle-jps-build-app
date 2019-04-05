@@ -80,29 +80,41 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
                 var abortedStatus: Boolean = false
                 val callback = CompileStatusNotification { aborted, errors, warnings, compileContext ->
                     run {
-                        errorsCount = errors
-                        abortedStatus = aborted
-                        println("--------------------------------")
-                        println("Compilation done. Aborted=$aborted, Errors=$errors, Warnings=$warnings, CompileContext=$compileContext ")
-                        CompilerMessageCategory.values().forEach { category ->
-                            compileContext.getMessages(category).forEach {
-                                try {
-                                    println("$category - ${it.virtualFile?.canonicalPath ?: "-"}: ${it.message}")
-                                } catch (e: Throwable) {
-                                    e.printStackTrace()
-                                }
+                        try {
+                            errorsCount = errors
+                            abortedStatus = aborted
+                            println("--------------------------------")
+                            println("Compilation done. Aborted=$aborted, Errors=$errors, Warnings=$warnings, CompileContext=$compileContext ")
+                            CompilerMessageCategory.values().forEach { category ->
+                                compileContext.getMessages(category).forEach {
+                                    try {
+                                        println("$category - ${it.virtualFile?.canonicalPath ?: "-"}: ${it.message}")
+                                    } catch (e: Throwable) {
+                                        e.printStackTrace()
+                                    }
 
+                                }
                             }
+                            println("--------------------------------")
+
+                        } finally {
+                            finishedLautch.countDown()
                         }
-                        println("--------------------------------")
-                        finishedLautch.countDown()
                     }
                 }
 
-                val compileContext = CompileDriver2(project).rebuild(callback)
+                if (System.getProperty("build_mode_use_make") == "true") {
+                    CompileDriver2(project).make(ProjectCompileScope(project), true, callback)
+                } else {
+                    val compileContext = CompileDriver2(project).rebuild(callback)
 
-                while (!finishedLautch.await(1, TimeUnit.MINUTES)) {
-                    println("Compilation status: Errors: ${compileContext.getMessages(CompilerMessageCategory.ERROR).size}. Warnings: ${compileContext.getMessages(CompilerMessageCategory.WARNING).size}.")
+                    while (!finishedLautch.await(1, TimeUnit.MINUTES)) {
+                        if (! compileContext.progressIndicator.isRunning) {
+                            println("Progress indicator says that compilation is not running.")
+                            break
+                        }
+                        println("Compilation status: Errors: ${compileContext.getMessages(CompilerMessageCategory.ERROR).size}. Warnings: ${compileContext.getMessages(CompilerMessageCategory.WARNING).size}.")
+                    }
                 }
 
                 if (errorsCount > 0 || abortedStatus) {
