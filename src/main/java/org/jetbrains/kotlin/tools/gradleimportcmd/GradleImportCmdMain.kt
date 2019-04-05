@@ -112,7 +112,7 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
                     }
                 }
 
-                CompilerConfigurationImpl.getInstance(project).setBuildProcessHeapSize(2000)
+                CompilerConfigurationImpl.getInstance(project).setBuildProcessHeapSize(3500)
 
                 if (System.getenv("build_mode_use_make") == "true") {
                     CompileDriver2(project).make(ProjectCompileScope(project), true, callback)
