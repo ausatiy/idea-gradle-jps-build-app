@@ -38,6 +38,7 @@ import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
 import org.jetbrains.plugins.gradle.util.GradleConstants
 import java.io.File
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 const val cmd = "importAndSave"
 
@@ -75,8 +76,12 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
                 System.exit(1)
             } else {
                 println("Compiling project")
+                var errorsCount: Int = 0
+                var abortedStatus: Boolean = false
                 val callback = CompileStatusNotification { aborted, errors, warnings, compileContext ->
                     run {
+                        errorsCount = errors
+                        abortedStatus = aborted
                         println("--------------------------------")
                         println("Compilation done. Aborted=$aborted, Errors=$errors, Warnings=$warnings, CompileContext=$compileContext ")
                         CompilerMessageCategory.values().forEach { category ->
@@ -94,11 +99,18 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
                     }
                 }
 
-                //CompileDriver2(project).make(ProjectCompileScope(project), true, callback)
-                CompileDriver2(project).rebuild(callback)
-                        //.make(ProjectCompileScope(project), true, callback)
-                finishedLautch.await()
-                println("Compile done. Exiting...")
+                val compileContext = CompileDriver2(project).rebuild(callback)
+
+                while (!finishedLautch.await(1, TimeUnit.MINUTES)) {
+                    println("Compilation status: Errors: ${compileContext.getMessages(CompilerMessageCategory.ERROR).size}. Warnings: ${compileContext.getMessages(CompilerMessageCategory.WARNING).size}.")
+                }
+
+                if (errorsCount > 0 || abortedStatus) {
+                    println("Compilation has failed. Exiting...")
+                } else {
+                    println("Compile done. Exiting...")
+                }
+
             }
 
 
@@ -155,10 +167,6 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
 
             ProjectJdkTable.getInstance().addJdk(mySdk)
             ProjectRootManager.getInstance(project).projectSdk = mySdk
-
-            //public void addSdk(@NotNull SdkType type, @NotNull String home, @Nullable Consumer<Sdk> callback) {
-            //ProjectStructureConfigurable.getInstance(project).projectJdksModel.addSdk(mySdk.sdkType, jdkPath, null)
-
         }
 
         val projectSettings = GradleProjectSettings()

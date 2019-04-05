@@ -81,8 +81,8 @@ public class CompileDriver2 {
     public void setCompilerFilter(@SuppressWarnings("unused") CompilerFilter compilerFilter) {
     }
 
-    public void rebuild(CompileStatusNotification callback) {
-        doRebuild(callback, new ProjectCompileScope(myProject));
+    public CompileContext rebuild(CompileStatusNotification callback) {
+        return doRebuild(callback, new ProjectCompileScope(myProject));
     }
 
     public void make(CompileScope scope, CompileStatusNotification callback) {
@@ -150,12 +150,13 @@ public class CompileDriver2 {
         }
     }
 
-    private void doRebuild(CompileStatusNotification callback, final CompileScope compileScope) {
+    private CompileContext doRebuild(CompileStatusNotification callback, final CompileScope compileScope) {
         if (validateCompilerConfiguration(compileScope)) {
-            startup(compileScope, true, false, callback, null);
+            return startup(compileScope, true, false, callback, null);
         }
         else {
             callback.finished(true, 0, 0, DummyCompileContext.create(myProject));
+            return null;
         }
     }
 
@@ -353,12 +354,12 @@ public class CompileDriver2 {
         });
     }
 
-    private void startup(final CompileScope scope, final boolean isRebuild, final boolean forceCompile,
+    private CompileContext startup(final CompileScope scope, final boolean isRebuild, final boolean forceCompile,
                          final CompileStatusNotification callback, final CompilerMessage message) {
-        startup(scope, isRebuild, forceCompile, false, callback, message);
+        return startup(scope, isRebuild, forceCompile, false, callback, message);
     }
 
-    private void startup(final CompileScope scope,
+    private CompileContextImpl startup(final CompileScope scope,
                          final boolean isRebuild,
                          final boolean forceCompile,
                          boolean withModalProgress, final CompileStatusNotification callback,
@@ -461,6 +462,7 @@ public class CompileDriver2 {
             }
             startup(scope, isRebuild, forceCompile, callback, message);
         });
+        return compileContext;
     }
 
     @Nullable @TestOnly
