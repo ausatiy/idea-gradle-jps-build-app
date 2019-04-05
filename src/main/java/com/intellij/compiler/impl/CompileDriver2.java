@@ -468,22 +468,33 @@ public class CompileDriver2 {
     private long notifyCompilationCompleted(final CompileContextImpl compileContext, final CompileStatusNotification callback, final ExitStatus _status) {
         System.out.println("notifyCompilationCompleted");
         final long duration = System.currentTimeMillis() - compileContext.getStartCompilationStamp();
-        if (!myProject.isDisposed()) {
-            // refresh on output roots is required in order for the order enumerator to see all roots via VFS
-            final Module[] affectedModules = compileContext.getCompileScope().getAffectedModules();
+        System.out.println("durationCalculated");
 
-            if (_status != ExitStatus.UP_TO_DATE && _status != ExitStatus.CANCELLED) {
-                // have to refresh in case of errors too, because run configuration may be set to ignore errors
-                Collection<String> affectedRoots = ContainerUtil.newHashSet(CompilerPathsEx.getOutputPaths(affectedModules));
-                if (!affectedRoots.isEmpty()) {
-                    ProgressIndicator indicator = compileContext.getProgressIndicator();
-                    indicator.setText("Synchronizing output directories...");
-                    CompilerUtil.refreshOutputRoots(affectedRoots);
-                    indicator.setText("");
+        try {
+
+            if (!myProject.isDisposed()) {
+                System.out.println("!isProjectDisposed");
+
+                // refresh on output roots is required in order for the order enumerator to see all roots via VFS
+                final Module[] affectedModules = compileContext.getCompileScope().getAffectedModules();
+
+                if (_status != ExitStatus.UP_TO_DATE && _status != ExitStatus.CANCELLED) {
+                    // have to refresh in case of errors too, because run configuration may be set to ignore errors
+                    Collection<String> affectedRoots = ContainerUtil.newHashSet(CompilerPathsEx.getOutputPaths(affectedModules));
+                    if (!affectedRoots.isEmpty()) {
+                        ProgressIndicator indicator = compileContext.getProgressIndicator();
+                        indicator.setText("Synchronizing output directories...");
+                        CompilerUtil.refreshOutputRoots(affectedRoots);
+                        indicator.setText("");
+                    }
                 }
             }
+        } catch (Throwable e) {
+            System.out.println("Error in isDisposed");
+            e.printStackTrace();
         }
         {
+            System.out.println("Calculating message count");
             int errorCount = 0;
             int warningCount = 0;
             try {
@@ -491,6 +502,7 @@ public class CompileDriver2 {
                 warningCount = compileContext.getMessageCount(CompilerMessageCategory.WARNING);
             }
             finally {
+                System.out.println("Calling callback");
                 if (callback != null) {
                     callback.finished(_status == ExitStatus.CANCELLED, errorCount, warningCount, compileContext);
                 }
