@@ -1,7 +1,6 @@
 // Copyright 2000-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package com.intellij.compiler.impl;
 
-import com.intellij.CommonBundle;
 import com.intellij.compiler.*;
 import com.intellij.compiler.progress.CompilerTask;
 import com.intellij.compiler.server.BuildManager;
@@ -26,8 +25,6 @@ import com.intellij.openapi.roots.CompilerModuleExtension;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.roots.ui.configuration.DefaultModuleConfigurationEditorFactory;
 import com.intellij.openapi.roots.ui.configuration.ProjectSettingsService;
-import com.intellij.openapi.ui.MessageType;
-import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.io.FileUtil;
@@ -455,14 +452,7 @@ public class CompileDriver2 {
 
         compileTask.start(compileWork, () -> {
             if (isRebuild) {
-                final int rv = Messages.showOkCancelDialog(
-                        myProject, "You are about to rebuild the whole project.\nRun 'Build Project' instead?", "Confirm Project Rebuild",
-                        "Build", "Rebuild", Messages.getQuestionIcon()
-                );
-                if (rv == Messages.OK /*yes, please, do run make*/) {
-                    startup(scope, false, false, callback, null);
-                    return;
-                }
+                startup(scope, false, false, callback, null);
             }
             startup(scope, isRebuild, forceCompile, callback, message);
         });
@@ -508,19 +498,19 @@ public class CompileDriver2 {
 
             if (!myProject.isDisposed()) {
                 final String statusMessage = createStatusMessage(_status, warningCount, errorCount, duration);
-                final MessageType messageType = errorCount > 0 ? MessageType.ERROR : warningCount > 0 ? MessageType.WARNING : MessageType.INFO;
-                if (duration > ONE_MINUTE_MS && CompilerWorkspaceConfiguration.getInstance(myProject).DISPLAY_NOTIFICATION_POPUP) {
-                    ToolWindowManager.getInstance(myProject).notifyByBalloon(ToolWindowId.MESSAGES_WINDOW, messageType, statusMessage);
-                }
+//                final MessageType messageType = errorCount > 0 ? MessageType.ERROR : warningCount > 0 ? MessageType.WARNING : MessageType.INFO;
+//                if (duration > ONE_MINUTE_MS && CompilerWorkspaceConfiguration.getInstance(myProject).DISPLAY_NOTIFICATION_POPUP) {
+//                    ToolWindowManager.getInstance(myProject).notifyByBalloon(ToolWindowId.MESSAGES_WINDOW, messageType, statusMessage);
+//                }
 
                 final String wrappedMessage = _status != ExitStatus.UP_TO_DATE? "<a href='#'>" + statusMessage + "</a>" : statusMessage;
-                final Notification notification = CompilerManager.NOTIFICATION_GROUP.createNotification(
-                        "", wrappedMessage,
-                        messageType.toNotificationType(),
-                        new MessagesActivationListener(compileContext)
-                ).setImportant(false);
-                compileContext.getBuildSession().registerCloseAction(notification::expire);
-                notification.notify(myProject);
+//                final Notification notification = CompilerManager.NOTIFICATION_GROUP.createNotification(
+//                        "", wrappedMessage,
+//                        messageType.toNotificationType(),
+//                        new MessagesActivationListener(compileContext)
+//                ).setImportant(false);
+//                compileContext.getBuildSession().registerCloseAction(notification::expire);
+//                notification.notify(myProject);
 
                 if (_status != ExitStatus.UP_TO_DATE && compileContext.getMessageCount(null) > 0) {
                     final String msg = DateFormatUtil.formatDateTime(new Date()) + " - " + statusMessage;
@@ -714,9 +704,10 @@ public class CompileDriver2 {
         LOG.assertTrue(firstModule != null);
         String moduleNameToSelect = firstModule.getName();
         final String moduleNames = getModulesString(modulesInChunk);
-        Messages.showMessageDialog(myProject, CompilerBundle.message("error.chunk.modules.must.have.same.language.level", moduleNames),
-                CommonBundle.getErrorTitle(), Messages.getErrorIcon());
-        showConfigurationDialog(moduleNameToSelect, null);
+//        Messages.showMessageDialog(myProject, CompilerBundle.message("error.chunk.modules.must.have.same.language.level", moduleNames),
+//                CommonBundle.getErrorTitle(), Messages.getErrorIcon());
+//        showConfigurationDialog(moduleNameToSelect, null);
+        //TODO fail build
     }
 
     private void showCyclicModulesHaveDifferentJdksError(Set<Module> modulesInChunk) {
@@ -724,9 +715,10 @@ public class CompileDriver2 {
         LOG.assertTrue(firstModule != null);
         String moduleNameToSelect = firstModule.getName();
         final String moduleNames = getModulesString(modulesInChunk);
-        Messages.showMessageDialog(myProject, CompilerBundle.message("error.chunk.modules.must.have.same.jdk", moduleNames),
-                CommonBundle.getErrorTitle(), Messages.getErrorIcon());
-        showConfigurationDialog(moduleNameToSelect, null);
+//        Messages.showMessageDialog(myProject, CompilerBundle.message("error.chunk.modules.must.have.same.jdk", moduleNames),
+//                CommonBundle.getErrorTitle(), Messages.getErrorIcon());
+//        showConfigurationDialog(moduleNameToSelect, null);
+        //TODO fail build
     }
 
     private static String getModulesString(Collection<Module> modulesInChunk) {
@@ -762,8 +754,8 @@ public class CompileDriver2 {
             LOG.error(message);
         }
 
-        Messages.showMessageDialog(myProject, message, CommonBundle.getErrorTitle(), Messages.getErrorIcon());
-        showConfigurationDialog(nameToSelect, editorNameToSelect);
+//        Messages.showMessageDialog(myProject, message, CommonBundle.getErrorTitle(), Messages.getErrorIcon());
+//        showConfigurationDialog(nameToSelect, editorNameToSelect);
     }
 
     private void showConfigurationDialog(@Nullable String moduleNameToSelect, @Nullable String tabNameToSelect) {
