@@ -470,42 +470,6 @@ public class CompileDriver2 {
         final long duration = System.currentTimeMillis() - compileContext.getStartCompilationStamp();
         System.out.println("durationCalculated");
 
-        try {
-
-            if (!myProject.isDisposed()) {
-                System.out.println("!isProjectDisposed");
-
-                // refresh on output roots is required in order for the order enumerator to see all roots via VFS
-                final Module[] affectedModules = compileContext.getCompileScope().getAffectedModules();
-                System.out.println("affectedModulesCalculated");
-
-                if (_status != ExitStatus.UP_TO_DATE && _status != ExitStatus.CANCELLED) {
-                    // have to refresh in case of errors too, because run configuration may be set to ignore errors
-                    System.out.println("calcaulating affected roots");
-
-                    Collection<String> affectedRoots = ContainerUtil.newHashSet(CompilerPathsEx.getOutputPaths(affectedModules));
-                    System.out.println("calcaulated affected roots");
-                    if (!affectedRoots.isEmpty()) {
-                        System.out.println("calcaulating affected roots1");
-                        ProgressIndicator indicator = compileContext.getProgressIndicator();
-                        System.out.println("calcaulating affected roots2");
-                        indicator.setText("Synchronizing output directories...");
-                        System.out.println("calcaulating affected roots3");
-
-
-                        CompilerUtil.refreshOutputRoots(affectedRoots);
-                        System.out.println("calcaulating affected roots4");
-
-                        indicator.setText("");
-                        System.out.println("calcaulating affected roots5");
-
-                    }
-                }
-            }
-        } catch (Throwable e) {
-            System.out.println("Error in isDisposed");
-            e.printStackTrace();
-        }
         {
             System.out.println("Calculating message count");
             int errorCount = 0;
