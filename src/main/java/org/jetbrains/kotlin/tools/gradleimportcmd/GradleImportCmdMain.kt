@@ -30,6 +30,7 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.roots.ui.configuration.ProjectStructureConfigurable
 import com.intellij.openapi.roots.ui.configuration.projectRoot.ProjectSdksModel
 import com.intellij.openapi.util.Computable
+import com.intellij.openapi.util.LowMemoryWatcher
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.util.ThreeState
 import com.intellij.util.containers.stream
@@ -51,6 +52,12 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         println("Initializing")
 
         System.setProperty("idea.skip.indices.initialization", "true")
+
+        var lowMemoryNotifier = LowMemoryWatcher.register({
+            println("Low memory. Exiting...")
+            System.exit(2)
+
+        }, LowMemoryWatcher.LowMemoryWatcherType.ONLY_AFTER_GC)
 
         val application = ApplicationManagerEx.getApplicationEx()
 
@@ -129,6 +136,7 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
         } catch (t: Throwable) {
             t.printStackTrace()
         } finally {
+            lowMemoryNotifier = null // low memory notifications are not required any more
             println("Exit application")
             application.exit(true, true)
         }
