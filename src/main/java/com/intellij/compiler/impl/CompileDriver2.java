@@ -431,11 +431,11 @@ public class CompileDriver2 {
                 LOG.error(e); // todo
             }
             finally {
-                try {
-                    compilerCacheManager.flushCaches();
-                } catch (Throwable e) {
-                    e.printStackTrace();
-                }
+//                try {
+//                    compilerCacheManager.flushCaches();
+//                } catch (Throwable e) {
+//                    e.printStackTrace();
+//                }
 
                 final long duration = notifyCompilationCompleted(compileContext, callback, COMPILE_SERVER_BUILD_STATUS.get(compileContext));
                 CompilerUtil.logDuration(

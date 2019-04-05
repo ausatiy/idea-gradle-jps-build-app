@@ -150,9 +150,9 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
 
         val table = JavaAwareProjectJdkTableImpl.getInstanceEx()
         WriteAction.runAndWait<RuntimeException> {
+            val sdkType = JavaSdk.getInstance();
+            mySdk = sdkType.createJdk("JDK_1.8", jdkPath, false)
 
-            //JavaSdk("123").createJdk("name", jdkPath)
-            mySdk = (table.defaultSdkType as JavaSdk).createJdk("1.8", jdkPath)
             ProjectJdkTable.getInstance().addJdk(mySdk)
             ProjectRootManager.getInstance(project).projectSdk = mySdk
 

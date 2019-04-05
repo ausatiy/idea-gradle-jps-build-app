@@ -33,9 +33,8 @@ intellij {
 
 tasks.getByName('runIde') {
     systemProperties = ['java.awt.headless': 'true']
-    args = ['importAndSave', new File('.', 'jps').getAbsolutePath(), (System.getenv('JDK_8') + '/jre')]
+    args = ['importAndSave', new File('..', 'jps').getCanonicalFile().getAbsolutePath().toString(), (System.getenv('JDK_8'))]
 }
-
 
 group 'org.jetbrains'
 version '0.1'
