@@ -238,6 +238,7 @@ public class CompileDriver2 {
         return buildManager.scheduleBuild(myProject, compileContext.isRebuild(), compileContext.isMake(), onlyCheckUpToDate, scopes, paths, builderParams, new DefaultMessageHandler(myProject) {
             @Override
             public void sessionTerminated(@NotNull final UUID sessionId) {
+                System.out.println("sessionTerminated " + sessionId);
                 if (compileContext.shouldUpdateProblemsView()) {
                     final ProblemsView view = ProblemsView.SERVICE.getInstance(myProject);
                     view.clearProgress();
@@ -247,6 +248,7 @@ public class CompileDriver2 {
 
             @Override
             public void handleFailure(@NotNull UUID sessionId, CmdlineRemoteProto.Message.Failure failure) {
+                System.out.println("handleFailure " + failure);
                 compileContext.addMessage(CompilerMessageCategory.ERROR, failure.hasDescription()? failure.getDescription() : "", null, -1, -1);
                 final String trace = failure.hasStacktrace()? failure.getStacktrace() : null;
                 if (trace != null) {
@@ -257,6 +259,7 @@ public class CompileDriver2 {
 
             @Override
             protected void handleCompileMessage(UUID sessionId, CmdlineRemoteProto.Message.BuilderMessage.CompileMessage message) {
+                System.out.println("handleCompileMessage " + message);
                 final CmdlineRemoteProto.Message.BuilderMessage.CompileMessage.Kind kind = message.getKind();
                 //System.out.println(compilerMessage.getText());
                 final String messageText = message.getText();
@@ -291,6 +294,7 @@ public class CompileDriver2 {
 
             @Override
             protected void handleBuildEvent(UUID sessionId, CmdlineRemoteProto.Message.BuilderMessage.BuildEvent event) {
+                System.out.println("handleBuildEvent "+ event + " " + event.getEventType());
                 final CmdlineRemoteProto.Message.BuilderMessage.BuildEvent.Type eventType = event.getEventType();
                 switch (eventType) {
                     case FILES_GENERATED:
@@ -472,6 +476,7 @@ public class CompileDriver2 {
 
     /** @noinspection SSBasedInspection*/
     private long notifyCompilationCompleted(final CompileContextImpl compileContext, final CompileStatusNotification callback, final ExitStatus _status) {
+        System.out.println("notifyCompilationCompleted");
         final long duration = System.currentTimeMillis() - compileContext.getStartCompilationStamp();
         if (!myProject.isDisposed()) {
             // refresh on output roots is required in order for the order enumerator to see all roots via VFS
@@ -569,6 +574,7 @@ public class CompileDriver2 {
                 // suppressed
             }
             finally {
+                System.out.println("CompileDriver2.task_finished");
                 if (onTaskFinished != null) {
                     onTaskFinished.run();
                 }
