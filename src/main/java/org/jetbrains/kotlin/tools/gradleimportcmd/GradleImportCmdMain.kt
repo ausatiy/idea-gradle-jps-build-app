@@ -1,5 +1,7 @@
 package org.jetbrains.kotlin.tools.gradleimportcmd
 
+import com.intellij.compiler.CompilerConfigurationImpl
+import com.intellij.compiler.CompilerWorkspaceConfiguration
 import com.intellij.compiler.impl.CompileDriver2
 import com.intellij.compiler.impl.ProjectCompileScope
 import com.intellij.ide.impl.ProjectUtil
@@ -109,6 +111,8 @@ class GradleImportCmdMain : ApplicationStarterBase(cmd, 2) {
                         }
                     }
                 }
+
+                CompilerConfigurationImpl.getInstance(project).setBuildProcessHeapSize(2000)
 
                 if (System.getenv("build_mode_use_make") == "true") {
                     CompileDriver2(project).make(ProjectCompileScope(project), true, callback)
